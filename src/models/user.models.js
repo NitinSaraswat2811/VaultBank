@@ -19,6 +19,11 @@ const userSchema = mongoose.Schema({
     name: {
         type: String,
         required: [true, "Name is required"],
+    },
+    systemUser:{
+        type:Boolean,
+        default:false,
+        select:false
     }
 }, { timestamps: true }); // Automatically adds 'createdAt' and 'updatedAt' fields
 
