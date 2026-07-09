@@ -32,7 +32,12 @@ const transactionSchema = new mongoose.Schema({
      required: [true,"Idempotency Key is required for creating a transaction"],
      index:true,
      unique:true
-    }
+    },
+    // transactionSchema mein ye add kar do
+   description: {
+    type: String,
+    maxlength: [100, "Description cannot exceed 100 characters"],
+}
 },
 {
     timestamps:true

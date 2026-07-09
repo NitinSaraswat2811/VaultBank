@@ -1,9 +1,21 @@
 import { useState } from 'react'
-import './App.css'
+import { BrowserRouter,Routes,Route} from 'react-router-dom';
+import './index.css'
+import Login from "./pages/auth/login";
+import Signup from "./pages/auth/Signup";
+import Dashboard from "./pages/Dashboard/dashboard";
+/*import TP from "./TransactionProcess/TP";
+import TransactionHistory from "./History/TransactionHistory";*/
 
 function App() {
     return (
-        <h1>VaultBank</h1>
+         <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
     );
 }
 

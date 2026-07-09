@@ -16,9 +16,17 @@ const userSchema = mongoose.Schema({
         minlength: [6, "Password must be at least 6 characters long"],
         select: false // Excludes password from default database queries for security
     },
-    name: {
+    firstname: {
         type: String,
         required: [true, "Name is required"],
+    },
+    lastname:{
+        type: String,
+        required: [true, "Name is required"],
+    },
+    DateOfBirth:{
+        type:Date,
+        required:[true,"date of birth is required"],
     },
     systemUser:{
         type:Boolean,

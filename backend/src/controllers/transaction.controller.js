@@ -28,21 +28,32 @@ async function createTransaction(req,res){
      * validate request
      */
 
-    const { fromAccount, toAccount, amount, idempotencyKey} = req.body;
+    const { fromAccount, toAccountNumber, toAccountHolderName, amount, idempotencyKey, description} = req.body;
 
-    if(!fromAccount || !toAccount || !amount || !idempotencyKey){
+    if(!fromAccount || !toAccountNumber || !toAccountHolderName || !amount || !idempotencyKey){
         return res.status(400).json({
             message: "fromAccount, toAccount, amount and idempotencyKey are required"
         })
     }
 
-    const fromUserAccount = await accountModel.findOne({
+    const senderAccount = await accountModel.findOne({
         _id: fromAccount,
+        user:req.user.id,
     })
-    const toUserAccount = await accountModel.findOne({
-        _id:toAccount,
+    const receiverAccount = await accountModel.findOne({
+        accountNumber: toAccountNumber,
+        accountHolderName: toAccountHolderName.toUpperCase().trim()
     })
-    if(!fromUserAccount||!toUserAccount){
+
+    if (!receiverAccount) {
+        return res.status(404).json({ message: "Receiver account not found or details mismatch" });
+    }
+
+    // 3. Prevent Self-Transfer (Ek hi account mein transfer nahi ho sakta)
+    if (senderAccount._id.toString() === receiverAccount._id.toString()) {
+        return res.status(400).json({ message: "Cannot transfer money to the same account" });
+    }
+    if(!senderAccount||!receiverAccount){
      return res.status(400).json({
         message: "Invalid fromAccount or toAccount",
      })
@@ -83,7 +94,7 @@ async function createTransaction(req,res){
  /**
   *  check account status
   */
-   if(fromUserAccount.status!=="ACTIVE" || toUserAccount.status!=="ACTIVE"){
+   if(senderAccount.status!=="ACTIVE" || receiverAccount.status!=="ACTIVE"){
     return res.status(400).json({
         message:"Both fromAccount and toAccount must be ACTIVE to process transaction "
     })
@@ -93,7 +104,7 @@ async function createTransaction(req,res){
  * Derive sender balance from ledger
  */
 
- const balance = await fromUserAccount.getBalance()
+ const balance = await senderAccount.getBalance()
 
 if(balance<amount){
    return res.status(400).json({
@@ -104,128 +115,118 @@ if(balance<amount){
 /**
  * create transaction (Pending)
  */
-let transaction ;
-try{
-const session = await mongoose.startSession()
-session.startTransaction()
-
- transaction = (await transactionModel.create([{
-    fromAccount,
-    toAccount,
-    amount,
-    idempotencyKey,
-    status:"PENDING"
-}], {session}))[0]
-
-const debitLedgerEntry = await ledgerModel.create([{
-    account:fromAccount,
-    amount:amount,
-    transaction:transaction._id,
-    type:"DEBIT"
-}],{session})
-
-await(()=>{
-    return new Promise((resolve)=>setTimeout(resolve,15 *1000));
-})();
-
-const creditLedgerEntry = await ledgerModel.create([{
-    account:toAccount,
-    amount:amount,
-    transaction:transaction._id,
-    type:"CREDIT",
-}],{session})
-
-await transactionModel.findOneAndUpdate(
-    {_id: transaction._id},
-    {status:"COMPLETED"},
-    {session}
-)
-
-await session.commitTransaction()
-session.endSession()
-}catch(err){
-    console.log("transaction failed due to : ",err.message)
-    res.status(400).json({ message:"Transaction pending due to some issue try after some time"})
-}
-return res.status(201).json({
-    message:"Transaction completed successfully",
-    transaction:transaction
-})
+const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const tx = await executeTransfer(senderAccount, receiverAccount, amount, idempotencyKey, description, session);
+        await session.commitTransaction();
+        res.status(201).json({ message: "Success", transaction: tx });
+    } catch (err) {
+        await session.abortTransaction();
+        res.status(500).json({ message: err.message });
+    } finally {
+        session.endSession();
+    }
 }
 
 async function createInitialFundsTransaction(req, res) {
+    const { toAccountNumber, toAccountHolderName, amount, idempotencyKey, description } = req.body;
+    const adminUser = req.user;
+
+    // 1. Basic Request Validation
+    if (!toAccountNumber || !toAccountHolderName || !amount || !idempotencyKey) {
+        return res.status(400).json({ message: "Account details, amount, and idempotencyKey are required" });
+    }
+
     let session;
     try {
-        const { toAccount, amount, idempotencyKey } = req.body;
-        const adminUser = req.user; // Middleware se lo
+        // 2. Validate Receiver Account
+        const receiverAccount = await accountModel.findOne({
+            accountNumber: toAccountNumber,
+            accountHolderName: toAccountHolderName.toUpperCase().trim()
+        });
 
-        if (!toAccount || !amount || !idempotencyKey) {
-            return res.status(400).json({ message: "toAccount, amount, and idempotencyKey are required" });
+        if (!receiverAccount) {
+            return res.status(404).json({ message: "Invalid receiver's account details" });
         }
 
-        // 1. Validate Account (Added await)
-        const toUserAccount = await accountModel.findById(toAccount);
-        if (!toUserAccount) {
-            return res.status(400).json({ message: "Invalid toAccount" });
-        }
-
-        // 2. Validate System Account (Using req.user)
-        const fromUserAccount = await accountModel.findOne({user: adminUser._id });
-        if (!fromUserAccount) {
+        // 3. Validate System/Sender Account
+        const senderAccount = await accountModel.findOne({ user: adminUser._id });
+        if (!senderAccount) {
             return res.status(400).json({ message: "System user account not found" });
         }
 
-        // 3. Start Transaction
+        // 4. Start Transaction Session
         session = await mongoose.startSession();
         session.startTransaction();
-       
-        console.log("Type of transactionModel:", typeof transactionModel);
-    console.log("Is it a function?", typeof transactionModel === 'function')
-    
-        // 4. Create Transaction Document
-        const transaction = new transactionModel({
-            fromAccount: fromUserAccount._id,
-            toAccount,
-            amount,
-            idempotencyKey,
-            status: "PENDING"
-        });
-        await transaction.save({ session });
 
-        // 5. Create Ledger Entries
-        await ledgerModel.create([{
-            account: fromUserAccount._id,
-            amount: amount,
-            transaction: transaction._id,
-            type: "DEBIT"
-        }], { session });
+        // 5. Execute Transfer using the helper function
+        const tx = await executeTransfer(
+            senderAccount, 
+            receiverAccount, 
+            amount, 
+            idempotencyKey, 
+            description, 
+            session
+        );
 
-        await ledgerModel.create([{
-            account: toAccount,
-            amount: amount,
-            transaction: transaction._id,
-            type: "CREDIT"
-        }], { session });
-
-        // 6. Commit
-        transaction.status = "COMPLETED";
-        await transaction.save({ session });
+        // 6. Commit Transaction
         await session.commitTransaction();
-        session.endSession();
-
-        return res.status(201).json({
-            message: "Initial funds transaction completed successfully",
-            transaction: transaction
+        
+        return res.status(201).json({ 
+            message: "Initial funds added successfully", 
+            transaction: tx 
         });
 
     } catch (error) {
-        // Agar kuch bhi fail hua, transaction rollback karo
+        // 7. Rollback on failure
         if (session) {
             await session.abortTransaction();
+        }
+        console.error("Initial Funds Transaction Error:", error.message);
+        return res.status(500).json({ message: "Transaction Failed", error: error.message });
+    } finally {
+        // 8. End Session
+        if (session) {
             session.endSession();
         }
-        return res.status(500).json({ message: "Transaction Failed", error: error.message });
     }
+}
+
+async function executeTransfer(sender, receiver, amount, idempotencyKey, description, session) {
+    // 1. Create Transaction
+    const transaction = (await transactionModel.create([{
+        fromAccount: sender._id,
+        toAccount: receiver._id,
+        amount,
+        idempotencyKey,
+        status: "PENDING",
+        description: description || "Transfer" // Parameter se lo
+    }], { session }))[0];
+
+    // 2. Ledger Entries
+    await ledgerModel.create([{
+        account: sender._id,
+        amount,
+        transaction: transaction._id,
+        type: "DEBIT"
+    }], { session });
+
+    await ledgerModel.create([{
+        account: receiver._id,
+        amount,
+        transaction: transaction._id,
+        type: "CREDIT"
+    }], { session });
+
+    // 3. Update Status
+    const updatedTx = await transactionModel.findByIdAndUpdate(
+        transaction._id,
+        { status: "COMPLETED" },
+        { session, new: true }
+    );
+    
+    return updatedTx;
 }
 
 module.exports = {

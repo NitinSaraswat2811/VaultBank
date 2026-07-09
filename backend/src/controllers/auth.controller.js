@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken')
  * - POST /api/auth/register
  */
 async function userRegisterController(req,res){
-    const { email, password, name} = req.body ;
+    const { email, password,firstname, lastname, DateOfBirth} = req.body ;
 
     const isUserRegistered = await userModel.findOne({email:email});
 
@@ -21,7 +21,9 @@ async function userRegisterController(req,res){
     const user = await userModel.create({
         email,
         password,
-        name,
+        firstname,
+        lastname,
+        DateOfBirth,
         systemUser:true
     })
 
@@ -32,7 +34,8 @@ async function userRegisterController(req,res){
         user:{
             _id:user._id,
             email:user.email,
-            name:user.name
+            firstname:user.firstname,
+            lastname:user.lastname,
         },
         token
     })
@@ -40,8 +43,8 @@ async function userRegisterController(req,res){
  
 
 async function userLoginController(req,res){
-    let{email,password,name} = req.body;
-
+    let{email,password} = req.body;
+    
     let user = await userModel.findOne({email:email}).select("+password"); //it will not pass by default due to select:false, so we will have to select it manually
 
     if(!user){

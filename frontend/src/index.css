@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+
+body{
+  background-color: black;
+}
+
+/* Chrome, Safari, Edge, Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: none;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    /* 1000px ka box-shadow ek solid block banata hai. Isse #050505 rakho */
+    -webkit-box-shadow: 0 0 0px 1000px #050505 inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    color: #ffffff !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+    
+    /* Important: Ye line background ko override hone se bachati hai */
+    background-color: #050505 !important;
+}
+
+/* Ye line wo reddish line ko permanently hata degi */
+input:-webkit-autofill-preview {
+    display: none !important;
+}
+
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+}

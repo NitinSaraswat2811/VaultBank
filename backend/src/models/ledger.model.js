@@ -29,7 +29,9 @@ const ledgerSchema = new mongoose.Schema({
         required : [true,"Ledger type is required"],
         immutable:true
     }
-})
+},{ timestamps: true })
+
+ledgerSchema.index({ createdAt: -1 });  // -1 data ko descending order me lagata h jisse latest transaction dikhenge vahin 1 isko ascending order me 
 
 function preventLedgerModification(){
     throw new Error("Ledger entries are immutable and cannot be modified or deleted");

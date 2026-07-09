@@ -8,6 +8,16 @@ const accountSchema = new mongoose.Schema({
         required : [true,"Account must be associated with a user"],
         index: true
     },
+    accountNumber:{
+     type:String,
+     required:true,
+     unique:true,
+     index:true,
+    },
+    accountHolderName: {
+        type: String,
+        required: [true, "Account holder name is required"]
+    },
     status:{
         type:String,
         enum:{
@@ -23,6 +33,25 @@ const accountSchema = new mongoose.Schema({
     },
 },
 {timestamps:true})
+
+// using pre hook to crate account number before saving into databases
+accountSchema.pre('validate', async function(next) {
+    if (!this.accountNumber) {
+        // Logic: 10 digit ka random ya incrementing number
+        // Simple tarika: Timestamp ka last part + random digits
+        const timestamp = Date.now().toString().slice(-6);
+        const random = Math.floor(1000 + Math.random() * 9000);
+        this.accountNumber = "100" + timestamp + random; 
+    }
+    next();
+});
+
+accountSchema.pre('save', function(next) {
+    if (this.accountHolderName) {
+        this.accountHolderName = this.accountHolderName.toUpperCase().trim();
+    }
+    next();
+});
 
 accountSchema.index({user:1,status:1});
 
