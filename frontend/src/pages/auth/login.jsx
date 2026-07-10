@@ -1,37 +1,39 @@
-import React, { useState } from "react";
+import React, { useState,useContext} from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Landmark, User, LockKeyhole, Eye, EyeOff } from "lucide-react";
 import axios from "axios"; // Axios import karo
+import { loginUser } from "../../services/authServices";
+import { AuthContext } from "../../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate(); // navigate helps to change pages without reloading the browser like old <a> tag
+  const { login } = useContext(AuthContext);
+  const {user} = useContext(AuthContext);
+
+  const isAccountcreated = loginUser?.hasAccount;
+
   // State for form data
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e) => {
-    e.preventDefault();  // helps to prevent default submitting of form and reloading the browser if browser reloads our state will reload and wipe out so it stops it  
-    setLoading(true);
-
+    e.preventDefault();
     try {
-      // Backend ko data bhejo
-      const response = await axios.post("http://localhost:3000/api/auth/login", {
-        email: formData.email, // Backend ke field names match hone chahiye
-        password: formData.password
-      });
+        const { data } = await loginUser(formData); 
+        login(data.user, data.token); // Context update
 
-      // Token aur user details store karo
-      localStorage.setItem("token", response.data.token);
-
-      // Dashboard par bhejo
-      navigate("/dashboard");
+        if(isAccountcreated){
+        navigate("/dashboard");
+        }else{
+          navigate("/OnboardingDashboard");
+        }
     } catch (error) {
-      alert(error.response?.data?.message || "Login Failed");
-    } finally {
-      setLoading(false);
+        // Yahan error pta chalega
+        const errorMessage = error.response?.data?.message || "Something went wrong";
+        alert(errorMessage); // UI par error dikhao
     }
-  };
+};
   return (
     <div className="min-h-screen bg-[#050505] text-white relative flex items-center justify-center p-4 overflow-hidden font-sans">
 
@@ -60,6 +62,7 @@ const Login = () => {
             <User size={20} className="text-gray-400 mr-3" />
             <input
               type="email"
+              autoComplete="email"
               value={formData.email} // Ye zaroori hai
               placeholder="Email ID"
               className="w-full bg-transparent outline-none text-white placeholder-gray-500"
@@ -72,6 +75,7 @@ const Login = () => {
             <LockKeyhole size={20} className="text-gray-400 mr-3" />
             <input
               type={showPassword ? "text" : "password"}
+              autoComplete="password"
               placeholder="Password"
               className="w-full bg-transparent outline-none text-white placeholder-gray-500"
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}

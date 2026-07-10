@@ -33,7 +33,7 @@ const SignUp = ({ setShowSignUp }) => {
     catch (error) {
       alert(error.response?.data?.message || "Registration Failed");
     } finally {
-      setLoading(false);
+      setloading(false);
     }
   }
 
@@ -82,7 +82,7 @@ const SignUp = ({ setShowSignUp }) => {
             <Mail size={18} className="text-gray-400 mr-3" />
             <input
               name="email"
-              autoComplete="new-email"
+              autoComplete="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required

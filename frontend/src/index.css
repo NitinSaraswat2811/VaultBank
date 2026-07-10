@@ -18,25 +18,12 @@ body{
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
-    /* 1000px ka box-shadow ek solid block banata hai. Isse #050505 rakho */
-    -webkit-box-shadow: 0 0 0px 1000px #050505 inset !important;
-    -webkit-text-fill-color: #ffffff !important;
-    color: #ffffff !important;
-    transition: background-color 5000s ease-in-out 0s !important;
-    
-    /* Important: Ye line background ko override hone se bachati hai */
-    background-color: #050505 !important;
-}
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff;
 
-/* Ye line wo reddish line ko permanently hata degi */
-input:-webkit-autofill-preview {
-    display: none !important;
-}
+  transition: background-color 9999999s ease-in-out 0s;
 
-input::-webkit-contacts-auto-fill-button,
-input::-webkit-credentials-auto-fill-button {
-    display: none !important;
-    visibility: hidden;
-    pointer-events: none;
+  -webkit-background-clip: text;
 }
