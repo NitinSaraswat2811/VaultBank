@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken')
  * - POST /api/auth/register
  */
 async function userRegisterController(req,res){
-    const { email, password,firstname, lastname, DateOfBirth} = req.body ;
+    const { email, password,firstname, lastname} = req.body ;
 
     const isUserRegistered = await userModel.findOne({email:email});
 
@@ -24,7 +24,6 @@ async function userRegisterController(req,res){
         password,
         firstname,
         lastname,
-        DateOfBirth,
         systemUser:true
     })
 
@@ -64,14 +63,20 @@ async function userLoginController(req,res){
     const token = jwt.sign({userId:user._id},process.env.JWT_SECRET,{expiresIn:"5d"});
     res.cookie("token",token);
 
-    const hasAccount = await accountModel.findOne({_id:user._id});
+    const hasAccount = await accountModel.findOne({user:user._id});
+
+    if(!hasAccount){
+        console.log("User does not have any account");
+    }else{
+        console.log("User account status is ",hasAccount);
+    }
 
     res.status(200).json({
         user:{
             _id:user._id,
             email:user.email,
             firstname:user.firstname,
-            hasAccount
+            account:hasAccount
         },
        token
     })

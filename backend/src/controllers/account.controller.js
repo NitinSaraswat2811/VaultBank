@@ -2,12 +2,16 @@ const accountModel = require("../models/account.model");
 
 async function createAccountController(req,res){
     const user = req.user;
-     
-    const holderName = req.body.accountHolderName || user.name;
-    
+
+    const { mobile, DateOfBirth } = req.body;
+
+     if(!user){
+        console.log("User is not valid ",user);
+     }
     const account = await accountModel.create({
         user: user._id,
-        accountHolderName:holderName
+        mobileNumber:mobile,
+        DateOfBirth:DateOfBirth,
     })
 
     res.status(201).json({

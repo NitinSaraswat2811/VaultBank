@@ -24,10 +24,6 @@ const userSchema = mongoose.Schema({
         type: String,
         required: [true, "Name is required"],
     },
-    DateOfBirth:{
-        type:Date,
-        required:[true,"date of birth is required"],
-    },
     systemUser:{
         type:Boolean,
         default:false,

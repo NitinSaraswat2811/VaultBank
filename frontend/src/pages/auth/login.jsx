@@ -10,8 +10,6 @@ const Login = () => {
   const { login } = useContext(AuthContext);
   const {user} = useContext(AuthContext);
 
-  const isAccountcreated = loginUser?.hasAccount;
-
   // State for form data
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -23,7 +21,7 @@ const Login = () => {
         const { data } = await loginUser(formData); 
         login(data.user, data.token); // Context update
 
-        if(isAccountcreated){
+        if(data.user.account){
         navigate("/dashboard");
         }else{
           navigate("/OnboardingDashboard");

@@ -108,18 +108,6 @@ const SignUp = ({ setShowSignUp }) => {
             <button className="text-gray-400 hover:text-white" type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
           </div>
 
-          <div className="flex items-center border border-white/10 rounded-xl h-12 px-4 bg-white/5 focus-within:border-blue-500 transition">
-            <CalendarDays size={18} className="text-gray-400 mr-3" />
-            <input
-
-              name="DateOfBirth"
-              autoComplete="bday"
-              value={formData.DateOfBirth}
-              onChange={(e) => setFormData({ ...formData, DateOfBirth: e.target.value })}
-              required
-              type="date" className="w-full bg-transparent outline-none text-gray-400" />
-          </div>
-
           <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-xl mt-6 transition-all shadow-lg shadow-blue-900/20">
             Create Account
           </button>

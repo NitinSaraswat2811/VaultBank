@@ -14,9 +14,15 @@ const accountSchema = new mongoose.Schema({
      unique:true,
      index:true,
     },
-    accountHolderName: {
-        type: String,
-        required: [true, "Account holder name is required"]
+   mobileNumber: {
+    type: String,
+    required: [true, "Mobile number is required"],
+    trim: true,
+    match: [/^[6-9]\d{9}$/, "Please enter a valid mobile number"]
+},
+    DateOfBirth:{
+        type:Date,
+        required:[true,"date of birth is required"],
     },
     status:{
         type:String,
@@ -35,7 +41,10 @@ const accountSchema = new mongoose.Schema({
 {timestamps:true})
 
 // using pre hook to crate account number before saving into databases
-accountSchema.pre('validate', async function(next) {
+// either we can use an async function or can use the next() to proceed the flow
+
+
+accountSchema.pre('validate', async function() {
     if (!this.accountNumber) {
         // Logic: 10 digit ka random ya incrementing number
         // Simple tarika: Timestamp ka last part + random digits
@@ -43,14 +52,6 @@ accountSchema.pre('validate', async function(next) {
         const random = Math.floor(1000 + Math.random() * 9000);
         this.accountNumber = "100" + timestamp + random; 
     }
-    next();
-});
-
-accountSchema.pre('save', function(next) {
-    if (this.accountHolderName) {
-        this.accountHolderName = this.accountHolderName.toUpperCase().trim();
-    }
-    next();
 });
 
 accountSchema.index({user:1,status:1});

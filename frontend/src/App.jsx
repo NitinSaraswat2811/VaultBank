@@ -5,6 +5,7 @@ import Login from "./pages/auth/login";
 import Signup from "./pages/auth/Signup";
 import Dashboard from "./pages/Dashboard/dashboard";
 import OnboardingDashboard from './pages/Dashboard/OnboardingDashboard';
+import CreateAccount from './pages/accounts/CreateAccount';
 
 function App() {
     return (
@@ -14,6 +15,7 @@ function App() {
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/OnboardingDashboard" element={<OnboardingDashboard/>} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/CreateAccount" element={<CreateAccount/>}/>
                 </Routes>
             </BrowserRouter>
     );

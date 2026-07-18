@@ -1,69 +1,100 @@
-import React, { useState } from "react";
-import { Home, ArrowLeftRight, History, HelpCircle, Wallet, LogOut } from "lucide-react";
-import Navbar from "../../components/Navbar"; 
+import React from "react";
+import { Link } from "react-router-dom";
+import { LockKeyhole, Snowflake, UserX, ArrowRight, HelpCircle } from "lucide-react";
+import { AuthContext } from "../../context/AuthContext";
+import { useContext } from "react";
 
-const OnboardingDashboard = () => {
-    return (
-        <div className="flex min-h-screen bg-black text-white">
-            {/* Sidebar Fix: Sidebar ko flex container ke andar rakha */}
-            <Navbar />
+const STATUS_CONTENT = {
+  not_found: {
+    eyebrow: "NO ACCOUNT FOUND",
+    icon: UserX,
+    accent: "text-blue-400",
+    bg: "bg-blue-500/10",
+    border: "border-blue-500/20",
+    title: "We couldn't find an account",
+    body: "There is no vault linked to this profile yet. Create one to start securing your funds — it takes about two minutes.",
+    ctaLabel: "Create Account",
+    ctaTo: "/CreateAccount",
+    ctaColor: "bg-blue-600 hover:bg-blue-500",
+  },
+  closed: {
+    eyebrow: "ACCOUNT CLOSED",
+    icon: LockKeyhole,
+    accent: "text-red-400",
+    bg: "bg-red-500/10",
+    border: "border-red-500/20",
+    title: "This account has been closed",
+    body: "This vault is no longer active and cannot be reopened. Please open a new account to proceed.",
+    ctaLabel: "Open a New Account",
+    ctaTo: "/CreateAccount",
+    ctaColor: "bg-red-600 hover:bg-red-500",
+  },
+  frozen: {
+    eyebrow: "ACCOUNT FROZEN",
+    icon: Snowflake,
+    accent: "text-sky-400",
+    bg: "bg-sky-500/10",
+    border: "border-sky-500/20",
+    title: "This vault is temporarily frozen",
+    body: "Access has been paused for your security. Please reach out to our support team to unlock your account.",
+    ctaLabel: "Contact Support",
+    ctaTo: "/help",
+    ctaColor: "bg-sky-600 hover:bg-sky-500",
+  },
+};
 
-            {/* Content Area */}
-            <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
-                <div className="w-full max-w-2xl animate-in fade-in zoom-in duration-500">
-                    <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-10 shadow-2xl">
-                        
-                        {/* Icon */}
-                        <div className="flex justify-center">
-                            <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                <Wallet className="w-10 h-10 text-blue-400" />
-                            </div>
-                        </div>
+const OnboardingDashboard = ({ accountStatus = "not_found", children }) => {
+  const {user} = useContext(AuthContext);
+  if (accountStatus === "active") return <>{children}</>;
 
-                        {/* Heading */}
-                        <div className="text-center mt-8">
-                            <h1 className="text-4xl font-bold">Welcome to VaultBank 👋</h1>
-                            <p className="text-gray-400 mt-4 text-lg leading-8">
-                                Your profile has been created successfully.
-                                <br />
-                                To start banking, you'll need to open your first bank account.
-                            </p>
-                        </div>
+  const content = STATUS_CONTENT[accountStatus] ?? STATUS_CONTENT.not_found;
+  const Icon = content.icon;
 
-                        {/* CTA */}
-                        <div className="mt-10">
-                            <button className="w-full h-14 rounded-xl bg-blue-600 hover:bg-blue-700 transition text-lg font-semibold shadow-lg shadow-blue-900/30">
-                                Open Bank Account
-                            </button>
-                        </div>
+  return (
+    <div className="min-h-screen bg-[#050505] text-white relative font-sans overflow-x-hidden flex flex-col items-center justify-center p-6">
+      {/* Background Glow — same as Dashboard */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1e3a8a_0%,_transparent_65%)] opacity-30 pointer-events-none" />
 
-                        {/* Divider */}
-                        <div className="flex items-center gap-4 my-10">
-                            <div className="flex-1 h-px bg-white/10"></div>
-                            <span className="text-gray-500 text-sm uppercase tracking-widest">Benefits</span>
-                            <div className="flex-1 h-px bg-white/10"></div>
-                        </div>
-
-                        {/* Benefits Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                            <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
-                                <h3 className="font-semibold mb-2">Instant Account</h3>
-                                <p className="text-sm text-gray-400">Created instantly after verification.</p>
-                            </div>
-                            <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
-                                <h3 className="font-semibold mb-2">Secure Banking</h3>
-                                <p className="text-sm text-gray-400">Bank-grade security for every transaction.</p>
-                            </div>
-                            <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
-                                <h3 className="font-semibold mb-2">Money Transfers</h3>
-                                <p className="text-sm text-gray-400">Fast transfers available once active.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
+      {/* Card */}
+      <div className="relative z-20 w-full max-w-sm bg-white/5 backdrop-blur-sm p-10 rounded-3xl border border-white/10 flex flex-col items-center text-center shadow-2xl">
+        {/* Seal Icon */}
+        <div className={`w-24 h-24 rounded-full ${content.bg} ${content.border} border flex items-center justify-center mb-6`}>
+          <Icon size={40} className={content.accent} strokeWidth={1.5} />
         </div>
-    );
+
+        {/* Eyebrow */}
+        <div
+          className={`flex items-center gap-2 px-3 py-1 rounded-full border ${content.border} ${content.bg} ${content.accent} text-[10px] font-bold tracking-[0.2em] mb-5`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${content.accent.replace("text", "bg")}`} />
+          {content.eyebrow}
+        </div>
+
+        {/* Text — same gradient heading treatment as Dashboard's welcome message */}
+        <h1 className="text-2xl font-semibold leading-tight mb-3 bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
+          {content.title}
+        </h1>
+        <p className="text-sm text-gray-400 leading-relaxed mb-8">{content.body}</p>
+
+        {/* Single status-correct action */}
+        <Link
+          to={content.ctaTo}
+          className={`w-full py-3.5 rounded-xl font-semibold text-white transition flex items-center justify-center gap-2 ${content.ctaColor}`}
+        >
+          {content.ctaLabel}
+          {content.ctaLabel !== "Contact Support" ? (
+            <ArrowRight size={16} />
+          ) : (
+            <HelpCircle size={16} />
+          )}
+        </Link>
+      </div>
+
+      <p className="relative z-20 mt-8 text-[11px] text-gray-600 tracking-wider">
+        REF ID: VLT-{accountStatus.toUpperCase()}-{new Date().getFullYear()}
+      </p>
+    </div>
+  );
 };
 
 export default OnboardingDashboard;
