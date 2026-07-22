@@ -28,26 +28,39 @@ async function createTransaction(req,res){
      * validate request
      */
 
-    const { fromAccount, toAccountNumber, toAccountHolderName, amount, idempotencyKey, description} = req.body;
+    const {fromAccountNumber,toAccountNumber, toAccountHolderName, amount, description,idempotencyKey} = req.body;
 
-    if(!fromAccount || !toAccountNumber || !toAccountHolderName || !amount || !idempotencyKey){
+    if(!fromAccountNumber || !toAccountNumber || !toAccountHolderName || !amount || !idempotencyKey){
         return res.status(400).json({
             message: "fromAccount, toAccount, amount and idempotencyKey are required"
         })
     }
 
     const senderAccount = await accountModel.findOne({
-        _id: fromAccount,
+        accountNumber: fromAccountNumber,
         user:req.user.id,
     })
+
+    const recieverName = toAccountHolderName.toUpperCase().trim();
+
     const receiverAccount = await accountModel.findOne({
         accountNumber: toAccountNumber,
-        accountHolderName: toAccountHolderName.toUpperCase().trim()
-    })
-
+    }).populate("user", "firstName lastName");
+    
+    if(!senderAccount){
+        return res.status(404).json({message: "Sender account details not found or details mismatch"});
+    }
     if (!receiverAccount) {
         return res.status(404).json({ message: "Receiver account not found or details mismatch" });
     }
+
+    const ActualreceiverName =
+    `${receiverAccount.user.firstName} ${receiverAccount.user.lastName}`
+        .toUpperCase()
+        .trim();
+     if(ActualreceiverName!==recieverName){
+        return res.status(404).json({message: "Account holder name is wrong"});
+     }
 
     // 3. Prevent Self-Transfer (Ek hi account mein transfer nahi ho sakta)
     if (senderAccount._id.toString() === receiverAccount._id.toString()) {

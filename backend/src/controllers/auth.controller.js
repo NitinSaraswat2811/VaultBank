@@ -63,20 +63,11 @@ async function userLoginController(req,res){
     const token = jwt.sign({userId:user._id},process.env.JWT_SECRET,{expiresIn:"5d"});
     res.cookie("token",token);
 
-    const hasAccount = await accountModel.findOne({user:user._id});
-
-    if(!hasAccount){
-        console.log("User does not have any account");
-    }else{
-        console.log("User account status is ",hasAccount);
-    }
-
     res.status(200).json({
         user:{
             _id:user._id,
             email:user.email,
             firstname:user.firstname,
-            account:hasAccount
         },
        token
     })

@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { LockKeyhole, Snowflake, UserX, ArrowRight, HelpCircle } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
+import { AccountContext } from "../../context/AccountContext";
 import { useContext } from "react";
 
 const STATUS_CONTENT = {
@@ -43,10 +44,16 @@ const STATUS_CONTENT = {
   },
 };
 
-const OnboardingDashboard = ({ accountStatus = "not_found", children }) => {
-  const {user} = useContext(AuthContext);
-  if (accountStatus === "active") return <>{children}</>;
-
+const OnboardingDashboard = () => {
+  const { Accounts } = useContext(AccountContext);
+    let accountStatus ;
+    if (!Accounts || Accounts.length === 0) {
+        accountStatus = "not_found";
+    }else{
+    const account = Accounts[0];
+    accountStatus = account.status.toLowerCase();
+    }
+  
   const content = STATUS_CONTENT[accountStatus] ?? STATUS_CONTENT.not_found;
   const Icon = content.icon;
 
@@ -54,6 +61,10 @@ const OnboardingDashboard = ({ accountStatus = "not_found", children }) => {
     <div className="min-h-screen bg-[#050505] text-white relative font-sans overflow-x-hidden flex flex-col items-center justify-center p-6">
       {/* Background Glow — same as Dashboard */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#1e3a8a_0%,_transparent_65%)] opacity-30 pointer-events-none" />
+      
+      <div className="fixed top-8 left-8">
+        <h1 className="text-2xl font-bold text-blue-500 tracking-tight">VaultBank</h1>
+      </div>
 
       {/* Card */}
       <div className="relative z-20 w-full max-w-sm bg-white/5 backdrop-blur-sm p-10 rounded-3xl border border-white/10 flex flex-col items-center text-center shadow-2xl">

@@ -32,7 +32,7 @@ async function getAccountBalanceController(req,res){
        return res.status(400).json({message:"Not a valid account or Unauthorized access"});
     }
     
-    let balance = await account  .getBalance();
+    let balance = await account.getBalance();
 
     res.status(200).json({
         accountId:account._id,

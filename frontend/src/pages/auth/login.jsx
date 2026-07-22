@@ -4,11 +4,13 @@ import { Landmark, User, LockKeyhole, Eye, EyeOff } from "lucide-react";
 import axios from "axios"; // Axios import karo
 import { loginUser } from "../../services/authServices";
 import { AuthContext } from "../../context/AuthContext";
+import { getAllUserAccounts } from "../../services/authServices";
+import { AccountContext } from "../../context/AccountContext";
 
 const Login = () => {
   const navigate = useNavigate(); // navigate helps to change pages without reloading the browser like old <a> tag
   const { login } = useContext(AuthContext);
-  const {user} = useContext(AuthContext);
+  const {setAccounts} = useContext(AccountContext);
 
   // State for form data
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -20,8 +22,14 @@ const Login = () => {
     try {
         const { data } = await loginUser(formData); 
         login(data.user, data.token); // Context update
+        //pahle user save hoga then uske accounts k liye response jayega with token etc
 
-        if(data.user.account){
+        const accountsResponse = await getAllUserAccounts();
+        const accounts = accountsResponse.data.accounts;
+
+        setAccounts(accounts);
+  //agar frontend me accounts array update krne k baad usse check karenge to late ho skta h aur empty array bhi true ho jata h is vajah se direct backend response se check kiya
+        if(accounts){
         navigate("/dashboard");
         }else{
           navigate("/OnboardingDashboard");
@@ -39,7 +47,7 @@ const Login = () => {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,_#1e3a8a_0%,_#050505_70%)] opacity-60 pointer-events-none"></div>
 
       {/* VaultBank Logo at Top-Left */}
-      <div className="absolute top-8 left-8">
+      <div className="fixed top-8 left-8">
         <h1 className="text-2xl font-bold text-blue-500 tracking-tight">VaultBank</h1>
       </div>
 

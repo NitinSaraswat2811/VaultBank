@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Landmark, User, LockKeyhole, Mail, CalendarDays, Eye, EyeOff } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { registerUser } from "../../services/authServices";
+import { AuthContext } from "../../context/AuthContext";
 import axios from "axios";
 
 const SignUp = ({ setShowSignUp }) => {
@@ -13,20 +15,15 @@ const SignUp = ({ setShowSignUp }) => {
 
   const handleSignUp = async (e) => {
     e.preventDefault();
-    setloading(true);
+
     if (formData.password != confirmPassword) {
       return alert('Password does not match');
     }
+    setloading(true);
     try {
-      const response = await axios.post('http://localhost:3000/api/auth/register', {
-        email: formData.email,
-        password: formData.password,
-        firstname: formData.firstname,
-        lastname: formData.lastname,
-        DateOfBirth: formData.DateOfBirth
-      });
+     const { data } = await registerUser(formData);
 
-      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("token", data.token);
 
       navigate('/');
     }
@@ -44,7 +41,7 @@ const SignUp = ({ setShowSignUp }) => {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,_#1e3a8a_0%,_#050505_70%)] opacity-60 pointer-events-none"></div>
 
       {/* Logo */}
-      <div className="absolute top-8 left-8">
+      <div className="fixed top-8 left-8">
         <h1 className="text-2xl font-bold text-blue-500 tracking-tight">VaultBank</h1>
       </div>
 

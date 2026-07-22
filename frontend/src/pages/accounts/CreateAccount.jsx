@@ -38,7 +38,10 @@ const CreateAccount = () => {
       
       {/* Background Glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,_#1e3a8a_0%,_#050505_70%)] opacity-60 pointer-events-none"></div>
-
+      
+       <div className="absolute top-8 left-8">
+        <h1 className="text-2xl font-bold text-blue-500 tracking-tight">VaultBank</h1>
+      </div>
       {/* Account Form Card */}
       <div className="relative z-10 w-full max-w-lg bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 md:p-10 shadow-2xl">
         

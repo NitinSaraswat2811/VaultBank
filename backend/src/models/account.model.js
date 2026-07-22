@@ -8,6 +8,7 @@ const accountSchema = new mongoose.Schema({
         required : [true,"Account must be associated with a user"],
         index: true
     },
+  
     accountNumber:{
      type:String,
      required:true,
@@ -42,7 +43,6 @@ const accountSchema = new mongoose.Schema({
 
 // using pre hook to crate account number before saving into databases
 // either we can use an async function or can use the next() to proceed the flow
-
 
 accountSchema.pre('validate', async function() {
     if (!this.accountNumber) {
