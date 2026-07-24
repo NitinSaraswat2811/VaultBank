@@ -10,6 +10,8 @@ const transactionRoutes = Router();
 
 transactionRoutes.post("/",authMiddleware.authMiddleware, transactionController.createTransaction );
 
-transactionRoutes.post("/system/initial-funds",authMiddleware.authSystemUserMiddleware,transactionController.createInitialFundsTransaction)
+transactionRoutes.post("/system/initial-funds",authMiddleware.authSystemUserMiddleware,transactionController.createInitialFundsTransaction);
+
+transactionRoutes.get("/TransactionHistory/:accountId",authMiddleware.authMiddleware,transactionController.getTransactionHistory);
 
 module.exports = transactionRoutes;

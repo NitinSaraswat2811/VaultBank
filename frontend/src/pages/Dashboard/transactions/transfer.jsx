@@ -19,6 +19,12 @@ import { getbalance } from "../../../services/authServices";
 const currency = (n) =>
   Number(n || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 });
 
+const maskAccountNumber = (num) => {
+  if (!num) return "";
+  const str = String(num);
+  return str.length > 4 ? `\u2022\u2022\u2022\u2022 ${str.slice(-4)}` : str;
+};
+
 // Every real outcome your backend can return gets its own icon, color, and
 // copy — a failed or pending transfer should never look like a success.
 const STATUS_CONFIG = {
@@ -77,36 +83,47 @@ const Transfer = () => {
     amount: "",
     description: "",
   });
-  const [balance,setBalance] = useState(null);
+  const [balance, setBalance] = useState(null);
   const [loading, setloading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null); // last completed transaction
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const idempotencyKey = useRef(null);
-
+   
+  // Matches by number regardless of whether it was typed or picked from the list.
   const fromAccount = useMemo(
     () => Accounts?.find((a) => a.accountNumber === formData.SenderAccountNumber),
     [Accounts, formData.SenderAccountNumber]
   );
+  const fromAccountUsable = Boolean(fromAccount && fromAccount.status === "ACTIVE");
+
+  const activeAccounts = useMemo(() => Accounts?.filter((a) => a.status === "ACTIVE") ?? [], [Accounts]);
+  const visibleSuggestions = useMemo(
+    () =>
+      activeAccounts.filter(
+        (acc) => !formData.SenderAccountNumber || acc.accountNumber.includes(formData.SenderAccountNumber)
+      ),
+    [activeAccounts, formData.SenderAccountNumber]
+  );
 
   useEffect(() => {
     if (!fromAccount?._id) {
-        setBalance(null);
-        return;
+      setBalance(null);
+      return;
     }
 
     const fetchBalance = async () => {
-        try {
-            const response = await getbalance(fromAccount._id);
-            setBalance(response.data.balance);
-        } catch (error) {
-            console.error("Failed to fetch balance", error);
-            setBalance(null);
-        }
+      try {
+        const response = await getbalance(fromAccount._id);
+        setBalance(response.data.balance);
+      } catch (err) {
+        console.error("Failed to fetch balance", err);
+        setBalance(null);
+      }
     };
 
     fetchBalance();
-}, [fromAccount]);
+  }, [fromAccount]);
 
   const amountNumber = Number(formData.amount) || 0;
   const hasKnownBalance = typeof balance === "number";
@@ -115,7 +132,7 @@ const Transfer = () => {
   const canContinue =
     formData.accountHolderName.trim().length > 1 &&
     formData.RecieverAccountNumber.trim().length >= 4 &&
-    formData.SenderAccountNumber &&
+    fromAccountUsable &&
     amountNumber > 0 &&
     !insufficientFunds;
 
@@ -134,14 +151,25 @@ const Transfer = () => {
       idempotencyKey.current = crypto.randomUUID();
     }
     const key = idempotencyKey.current;
-
+    console.log("Idempotency key is ",key);
     setloading(true);
     setError("");
 
     try {
-      const { data } = await transferMoney({ ...formData, idempotencyKey: key });
+      const { data } = await transferMoney({
+     fromAccountNumber: formData.SenderAccountNumber,
+     toAccountNumber: formData.RecieverAccountNumber,
+     toAccountHolderName: formData.accountHolderName,
+     amount: formData.amount,
+     description: formData.description,
+     idempotencyKey: key,
+   });
       const transaction = data.transaction;
       settransaction(transaction);
+
+       console.log(transaction.status);
+
+       console.log("result is ", result);
 
       if (transaction.status === "COMPLETED") {
         // Current transaction finished — a new transaction can now get a new key.
@@ -151,6 +179,7 @@ const Transfer = () => {
       setResult(transaction);
       setStep("result");
     } catch (err) {
+      console.log(err);
       const errorMessage = err.response?.data?.message || "Something went wrong";
       setError(errorMessage);
     } finally {
@@ -175,11 +204,11 @@ const Transfer = () => {
   return (
     <div className="min-h-screen bg-[#050505] text-white p-4 flex relative justify-center items-center overflow-hidden font-sans">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,_#1e3a8a_0%,_#050505_70%)] opacity-60 pointer-events-none" />
-       
-       <div className="fixed top-8 left-8">
+
+      <div className="fixed top-8 left-8">
         <h1 className="text-2xl font-bold text-blue-500 tracking-tight">VaultBank</h1>
       </div>
-      
+
       <div className="relative w-full max-w-lg bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 md:p-8 z-10 shadow-2xl">
         {step === "details" && (
           <div className="animate-[fadeIn_0.25s_ease]">
@@ -210,43 +239,43 @@ const Transfer = () => {
                 />
               </div>
               {insufficientFunds && (
-                <p className="mt-3 text-xs text-red-400">
-                  Exceeds available balance of {currency(balance)}
-                </p>
+                <p className="mt-3 text-xs text-red-400">Exceeds available balance of {currency(balance)}</p>
               )}
             </div>
 
             <div className="space-y-4">
-              {/* Custom themed dropdown — replaces native select/datalist so the
-                  open menu never breaks out of the dark glassmorphism theme. */}
+              {/* Editable combobox: type an account number directly, or open the
+                  list and pick one. Either path lands in the same formData field. */}
               <div>
-                <label className="text-xs uppercase tracking-wide text-gray-500 mb-1.5 block">
-                  Send from
-                </label>
+                <label className="text-xs uppercase tracking-wide text-gray-500 mb-1.5 block">Send from</label>
                 <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Enter or select account number"
+                    value={formData.SenderAccountNumber}
+                    onChange={(e) => {
+                      setformData((prev) => ({ ...prev, SenderAccountNumber: e.target.value }));
+                      setAccountMenuOpen(true);
+                    }}
+                    onFocus={() => setAccountMenuOpen(true)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/60 transition-colors"
+                  />
                   <button
                     type="button"
                     onClick={() => setAccountMenuOpen((o) => !o)}
-                    className="w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/60 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                    aria-label="Toggle account list"
                   >
-                    <span className="truncate text-left">
-                      {fromAccount
-                        ? `${fromAccount.accountType || "Account"} \u2022 ${fromAccount.accountNumber}`
-                        : "Choose an account"}
-                    </span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-gray-500 shrink-0 ml-2 transition-transform ${
-                        accountMenuOpen ? "rotate-180" : ""
-                      }`}
-                    />
+                    <ChevronDown className={`w-4 h-4 transition-transform ${accountMenuOpen ? "rotate-180" : ""}`} />
                   </button>
 
                   {accountMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-20" onClick={() => setAccountMenuOpen(false)} />
                       <div className="absolute z-30 mt-2 w-full bg-[#0a0a0a] border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto">
-                        {Accounts?.length ? (
-                          Accounts.map((acc) => (
+                        {visibleSuggestions.length ? (
+                          visibleSuggestions.map((acc) => (
                             <button
                               type="button"
                               key={acc._id}
@@ -259,21 +288,27 @@ const Transfer = () => {
                               }`}
                             >
                               <span>
-                                <span className="block">{acc.accountType || "Account"}</span>
+                                <span className="block">Account {maskAccountNumber(acc.accountNumber)}</span>
                                 <span className="block text-xs text-gray-500">{acc.accountNumber}</span>
                               </span>
-                              {typeof balance === "number" && (
-                                <span className="text-xs text-gray-400 shrink-0 ml-3">{currency(balance)}</span>
-                              )}
                             </button>
                           ))
                         ) : (
-                          <p className="px-4 py-3 text-sm text-gray-500">No accounts found</p>
+                          <p className="px-4 py-3 text-sm text-gray-500">No matching active accounts</p>
                         )}
                       </div>
                     </>
                   )}
                 </div>
+
+                {formData.SenderAccountNumber && !fromAccount && (
+                  <p className="mt-1.5 text-xs text-amber-400">This doesn't match any of your accounts.</p>
+                )}
+                {fromAccount && !fromAccountUsable && (
+                  <p className="mt-1.5 text-xs text-amber-400">
+                    This account is {fromAccount.status.toLowerCase()} and can't send money.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -344,9 +379,7 @@ const Transfer = () => {
             <div className="bg-white/5 border border-white/10 rounded-2xl divide-y divide-white/10 mb-6">
               <div className="flex items-center justify-between px-5 py-3.5">
                 <span className="text-sm text-gray-400">From</span>
-                <span className="text-sm font-medium">
-                  {fromAccount?.accountType || "Account"} ({fromAccount?.accountNumber})
-                </span>
+                <span className="text-sm font-medium">Account {maskAccountNumber(fromAccount?.accountNumber)}</span>
               </div>
               <div className="flex items-center justify-between px-5 py-3.5">
                 <span className="text-sm text-gray-400">To</span>

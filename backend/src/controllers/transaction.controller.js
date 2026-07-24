@@ -27,8 +27,13 @@ async function createTransaction(req,res){
     /**
      * validate request
      */
-
+     try{
     const {fromAccountNumber,toAccountNumber, toAccountHolderName, amount, description,idempotencyKey} = req.body;
+    
+    console.log("fromAccount is ",fromAccountNumber);
+    console.log("toAccount is ",toAccountNumber);
+    console.log("idempotency key is ",idempotencyKey);
+    console.log("Amount is ",amount);
 
     if(!fromAccountNumber || !toAccountNumber || !toAccountHolderName || !amount || !idempotencyKey){
         return res.status(400).json({
@@ -41,23 +46,31 @@ async function createTransaction(req,res){
         user:req.user.id,
     })
 
-    const recieverName = toAccountHolderName.toUpperCase().trim();
+    const recieverName = toAccountHolderName.toUpperCase().replace(/\s+/g, " ").trim();
 
     const receiverAccount = await accountModel.findOne({
         accountNumber: toAccountNumber,
-    }).populate("user", "firstName lastName");
-    
+    }).populate("user", "firstname lastname");
+
     if(!senderAccount){
         return res.status(404).json({message: "Sender account details not found or details mismatch"});
     }
     if (!receiverAccount) {
         return res.status(404).json({ message: "Receiver account not found or details mismatch" });
     }
+     if (!receiverAccount.user) {
+    return res.status(404).json({ message: "Receiver's linked user profile not found" });
+    }
 
     const ActualreceiverName =
-    `${receiverAccount.user.firstName} ${receiverAccount.user.lastName}`
+    `${receiverAccount.user.firstname}${receiverAccount.user.lastname}`
         .toUpperCase()
+        .replace(/\s+/g, " ") 
         .trim();
+
+        console.log("actual reciever name is ",ActualreceiverName);
+        console.log("reciever name is ",recieverName);
+
      if(ActualreceiverName!==recieverName){
         return res.status(404).json({message: "Account holder name is wrong"});
      }
@@ -65,11 +78,6 @@ async function createTransaction(req,res){
     // 3. Prevent Self-Transfer (Ek hi account mein transfer nahi ho sakta)
     if (senderAccount._id.toString() === receiverAccount._id.toString()) {
         return res.status(400).json({ message: "Cannot transfer money to the same account" });
-    }
-    if(!senderAccount||!receiverAccount){
-     return res.status(400).json({
-        message: "Invalid fromAccount or toAccount",
-     })
     }
 
 /**
@@ -84,22 +92,25 @@ async function createTransaction(req,res){
     if(isTransactionAlreadyExists.status === 'COMPLETED'){
        return res.status(200).json({
             message: "Transaction already processed",
-            transactin: isTransactionAlreadyExists
+            transaction: isTransactionAlreadyExists
         })
     }
         if(isTransactionAlreadyExists.status === 'PENDING'){
             return res.status(200).json({
                 message: "Transaction is still processing",
+                transaction: isTransactionAlreadyExists
             })
         }
         if(isTransactionAlreadyExists.status === 'FAILED'){
             return res.status(500).json({
                 message: "Transaction failed please retry",
+                transaction: isTransactionAlreadyExists
             })
         }
          if(isTransactionAlreadyExists.status === 'REVERSED'){
             return res.status(500).json({
                 message: "Transaction was reversed please retry",
+                transaction: isTransactionAlreadyExists
             })
         }
  }
@@ -136,10 +147,15 @@ const session = await mongoose.startSession();
         res.status(201).json({ message: "Success", transaction: tx });
     } catch (err) {
         await session.abortTransaction();
+        console.log(err.message);
         res.status(500).json({ message: err.message });
     } finally {
         session.endSession();
     }
+}catch(err){
+  console.log("error is", err.message);
+  return res.status(500).json({message:err.message});
+}
 }
 
 async function createInitialFundsTransaction(req, res) {
@@ -147,7 +163,7 @@ async function createInitialFundsTransaction(req, res) {
     const adminUser = req.user;
 
     // 1. Basic Request Validation
-    if (!toAccountNumber || !toAccountHolderName || !amount || !idempotencyKey) {
+    if (!toAccountNumber || !amount || !idempotencyKey) {
         return res.status(400).json({ message: "Account details, amount, and idempotencyKey are required" });
     }
 
@@ -156,7 +172,6 @@ async function createInitialFundsTransaction(req, res) {
         // 2. Validate Receiver Account
         const receiverAccount = await accountModel.findOne({
             accountNumber: toAccountNumber,
-            accountHolderName: toAccountHolderName.toUpperCase().trim()
         });
 
         if (!receiverAccount) {
@@ -206,6 +221,30 @@ async function createInitialFundsTransaction(req, res) {
     }
 }
 
+async function addInitialFunds(receiverAccount, amount, session) {
+     console.log("ENV VALUE:", process.env.SYSTEM_ACCOUNT_NUMBER);
+    console.log("ENV TYPE:", typeof process.env.SYSTEM_ACCOUNT_NUMBER);
+    
+    const systemAccount = await accountModel.findOne({
+        accountNumber: process.env.SYSTEM_ACCOUNT_NUMBER
+    }).session(session);
+
+    if (!systemAccount) {
+        throw new Error("System account not found");
+    }
+
+    const idempotencyKey = `INITIAL_FUNDS_${receiverAccount._id}`;
+
+    return executeTransfer(
+        systemAccount,
+        receiverAccount,
+        amount,
+        idempotencyKey,
+        "Initial account funding",
+        session
+    );
+}
+
 async function executeTransfer(sender, receiver, amount, idempotencyKey, description, session) {
     // 1. Create Transaction
     const transaction = (await transactionModel.create([{
@@ -242,7 +281,40 @@ async function executeTransfer(sender, receiver, amount, idempotencyKey, descrip
     return updatedTx;
 }
 
+ async function getTransactionHistory(req,res){
+    try{
+     const {accountId} = req.params;
+
+      const account = await accountModel.findOne({
+            _id: accountId,
+            user: req.user._id
+        });
+
+        if (!account) {
+            return res.status(404).json({
+                message: "Account not found or unauthorized access"
+            });
+        }
+         const history = await ledgerModel
+            .find({ account: accountId })
+            .populate("transaction")
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            history
+        });
+
+    }catch(err){
+        console.log(err);
+        return res.status(500).json({
+            message: "Failed to fetch transaction history",
+            error: err.message
+        });
+    }
+ }
 module.exports = {
     createTransaction,
-    createInitialFundsTransaction
+    createInitialFundsTransaction,
+    addInitialFunds,
+    getTransactionHistory
 }

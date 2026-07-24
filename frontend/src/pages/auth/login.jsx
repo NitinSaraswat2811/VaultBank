@@ -36,6 +36,7 @@ const Login = () => {
         }
     } catch (error) {
         // Yahan error pta chalega
+        console.log(error);
         const errorMessage = error.response?.data?.message || "Something went wrong";
         alert(errorMessage); // UI par error dikhao
     }

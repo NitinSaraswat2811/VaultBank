@@ -1,22 +1,61 @@
 const accountModel = require("../models/account.model");
+const { addInitialFunds } = require("./transaction.controller");
+const mongoose = require("mongoose");
 
-async function createAccountController(req,res){
+async function createAccountController(req, res) {
     const user = req.user;
 
     const { mobile, DateOfBirth } = req.body;
 
-     if(!user){
-        console.log("User is not valid ",user);
-     }
-    const account = await accountModel.create({
-        user: user._id,
-        mobileNumber:mobile,
-        DateOfBirth:DateOfBirth,
-    })
+    if (!user) {
+        return res.status(401).json({
+            message: "Unauthorized user"
+        });
+    }
 
-    res.status(201).json({
-        account
-    })
+    const session = await mongoose.startSession();
+
+    try {
+        session.startTransaction();
+
+        const account = await accountModel.create(
+            [{
+                user: user._id,
+                mobileNumber: mobile,
+                DateOfBirth: DateOfBirth,
+            }],
+            { session }
+        );
+
+        const newAccount = account[0];
+
+        const initialTransaction = await addInitialFunds(
+            newAccount,
+            10000,
+            session
+        );
+
+        await session.commitTransaction();
+
+        return res.status(201).json({
+            message: "Account created and funded successfully",
+            account: newAccount,
+            transaction: initialTransaction
+        });
+
+    } catch (err) {
+        console.error("ACCOUNT CREATION ERROR:", err);
+        
+        await session.abortTransaction();
+
+        return res.status(500).json({
+            message: "Account creation failed",
+            error: err.message
+        });
+
+    } finally {
+        await session.endSession();
+    }
 }
 
 async function getAccountBalanceController(req,res){
