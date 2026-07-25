@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { Home, ArrowLeftRight, History, HelpCircle, LogOut, Menu, Landmark } from "lucide-react";
 import { loginUser } from "../services/authServices";
 import { AuthContext } from "../context/AuthContext";
+import { AccountContext } from "../context/AccountContext";
 
 const NavItem = ({ to, icon, label, isOpen, active, isRed }) => (
   <NavLink 
@@ -19,7 +20,8 @@ const NavItem = ({ to, icon, label, isOpen, active, isRed }) => (
 const Navbar = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const { user } = useContext(AuthContext);
-  const isAccountCreated = user?.hasAccount;
+  const { Accounts }= useContext(AccountContext);
+  const isAccountCreated = Accounts.length>0 ;
   
   const handleDisabledClick = (e) => {
     // Agar account nahi hai, toh link navigation rok do aur alert dikhao

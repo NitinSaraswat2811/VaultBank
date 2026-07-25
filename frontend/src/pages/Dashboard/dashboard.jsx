@@ -47,7 +47,7 @@ const Dashboard = () => {
   const { Accounts, setTransactions } = useContext(AccountContext);
   const [balanceVisible, setBalanceVisible] = useState(true);
 
-  const primary = Accounts?.[0];
+  const primary = Accounts?.[1];
 
   const [balance, setBalance] = useState(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
@@ -70,10 +70,10 @@ const Dashboard = () => {
       .finally(() => setBalanceLoading(false));
   }, [primary?._id]);
 
-  // First (and so far only) page in the app to call the transaction history
-  // route. Pulls the primary account's history and keeps it both locally
-  // (for the "Recent Activity" preview) and in context (so the full History
-  // page has it too, without re-fetching).
+  // Pulls the primary account's ledger history (each entry has
+  // { account, amount, transaction: {...}, type: "DEBIT" | "CREDIT", createdAt })
+  // and keeps it both locally (for this preview) and in context (so the full
+  // History page has it too, without re-fetching).
   useEffect(() => {
     if (!primary?._id) return;
     setActivityLoading(true);
@@ -81,9 +81,6 @@ const Dashboard = () => {
     getTransactionHistory(primary._id)
       .then((res) => {
         const txns = res.data.history || [];
-
-        console.log("this is backend response", res.data.history);
-
         setRecentActivity(txns);
         setTransactions?.(txns);
       })
@@ -162,7 +159,7 @@ const Dashboard = () => {
 
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">
               <Link
-                to="/add-money"
+                to="/transfer"
                 className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 transition px-6 py-3.5 rounded-xl font-semibold"
               >
                 <Plus size={18} /> Add Money
@@ -254,7 +251,7 @@ const Dashboard = () => {
 
             {activityLoading ? (
               <div className="flex items-center justify-center gap-2 text-gray-500 text-sm py-10">
-                <Loader2 size={16} className="animate-spin" /> Loading activity\u2026
+                <Loader2 size={16} className="animate-spin" /> Loading activity{"\u2026"}
               </div>
             ) : activityError ? (
               <p className="text-sm text-red-400 text-center py-10">{activityError}</p>
@@ -269,7 +266,7 @@ const Dashboard = () => {
                       <div className="flex items-center gap-4 min-w-0">
                         <div
                           className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${
-                            isSent ? "bg-white/5 border-white/10" : "bg-emerald-500/10 border-emerald-500/20"
+                            isSent ? "bg-red-500/10 border-red-500/20" : "bg-emerald-500/10 border-emerald-500/20"
                           }`}
                         >
                           {isSent ? (
@@ -279,7 +276,9 @@ const Dashboard = () => {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{tx.description || (isSent ? "Sent" : "Received")}</p>
+                          <p className="font-medium text-sm truncate">
+                            {tx.transaction?.description || (isSent ? "Sent" : "Received")}
+                          </p>
                           <p className="text-xs text-gray-500 truncate">{formatActivityTime(tx.createdAt)}</p>
                         </div>
                       </div>

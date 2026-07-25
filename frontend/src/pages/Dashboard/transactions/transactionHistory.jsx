@@ -22,10 +22,10 @@ const maskAccountNumber = (num) => {
   return str.length > 4 ? `\u2022\u2022\u2022\u2022 ${str.slice(-4)}` : str;
 };
 
-// fromAccount/toAccount may arrive as a raw ObjectId string or as a populated
-// { _id, accountNumber } object depending on whether your route does
-// .populate("fromAccount toAccount"). This handles both without crashing.
-
+// fromAccount/toAccount live on the nested, populated `transaction` object
+// (not on the ledger entry itself), and may arrive as a raw ObjectId or a
+// populated { _id, accountNumber } depending on how deep your backend
+// populate goes. This handles both without crashing.
 const getAccountNumber = (field) => (field && typeof field === "object" ? field.accountNumber : null);
 
 const STATUS_CONFIG = {
@@ -69,37 +69,37 @@ function formatTime(dateStr) {
 }
 
 const TransactionHistory = () => {
-  const { transactions, Accounts } = useContext(AccountContext);
-  
-   console.log("This is my transaction array",transactions);
+  const { transactions } = useContext(AccountContext);
 
   const [directionFilter, setDirectionFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
 
-  const ownAccountIds = useMemo(() => new Set((Accounts || []).map((a) => String(a._id))), [Accounts]);
-
   const enriched = useMemo(() => {
     return (transactions || [])
       .map((tx) => {
-        const isSent = tx.type==="DEBIT";
-        const counterpartyField = isSent ? tx.toAccount : tx.fromAccount;
+        const isSent = tx.type === "DEBIT";
+        // fromAccount/toAccount/status/description all live inside the
+        // nested, populated transaction object — not on the ledger entry.
+        const counterpartyField = isSent ? tx.transaction?.toAccount : tx.transaction?.fromAccount;
         const counterpartyNumber = getAccountNumber(counterpartyField);
 
         return {
           ...tx,
           direction: isSent ? "sent" : "received",
           counterpartyLabel: counterpartyNumber ? maskAccountNumber(counterpartyNumber) : "VaultBank account",
+          statusValue: tx.transaction?.status,
+          descriptionValue: tx.transaction?.description,
           dateValue: tx.createdAt || tx.updatedAt || null,
         };
       })
       .sort((a, b) => new Date(b.dateValue) - new Date(a.dateValue));
-  }, [transactions, ownAccountIds]);
+  }, [transactions]);
 
   const filtered = useMemo(() => {
     return enriched.filter((tx) => {
       if (directionFilter !== "all" && tx.direction !== directionFilter) return false;
-      if (statusFilter !== "all" && tx.status !== statusFilter) return false;
+      if (statusFilter !== "all" && tx.statusValue !== statusFilter) return false;
       return true;
     });
   }, [enriched, directionFilter, statusFilter]);
@@ -199,7 +199,7 @@ const TransactionHistory = () => {
                 <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 px-1">{group.label}</p>
                 <div className="bg-white/5 border border-white/10 rounded-2xl divide-y divide-white/10 overflow-hidden">
                   {group.items.map((tx) => {
-                    const cfg = STATUS_CONFIG[tx.status] || FALLBACK_STATUS;
+                    const cfg = STATUS_CONFIG[tx.statusValue] || FALLBACK_STATUS;
                     const StatusIcon = cfg.icon;
                     const isSent = tx.direction === "sent";
 
@@ -207,7 +207,7 @@ const TransactionHistory = () => {
                       <div key={tx._id} className="flex items-center gap-4 px-5 py-4">
                         <div
                           className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${
-                            isSent ? "bg-white/5 border-white/10" : "bg-emerald-500/10 border-emerald-500/20"
+                            isSent ? "bg-red-500/10 border-red-500/20" : "bg-emerald-500/10 border-emerald-500/20"
                           }`}
                         >
                           {isSent ? (
@@ -222,7 +222,7 @@ const TransactionHistory = () => {
                             {isSent ? "Sent to" : "Received from"} {tx.counterpartyLabel}
                           </p>
                           <p className="text-xs text-gray-500 mt-0.5 truncate">
-                            {tx.description || "No description"} {tx.dateValue ? `\u00b7 ${formatTime(tx.dateValue)}` : ""}
+                            {tx.descriptionValue || "No description"} {tx.dateValue ? `\u00b7 ${formatTime(tx.dateValue)}` : ""}
                           </p>
                         </div>
 
