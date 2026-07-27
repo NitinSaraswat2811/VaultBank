@@ -44,11 +44,13 @@ const formatActivityTime = (dateStr) => {
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
-  const { Accounts, setTransactions } = useContext(AccountContext);
+  const { Accounts, setTransactions,Accountloading } = useContext(AccountContext);
   const [balanceVisible, setBalanceVisible] = useState(true);
 
-  const primary = Accounts?.[1];
-
+   console.log("Auth context k andar se user ye h ",user);
+  const primary = Accounts?.[0];
+  
+  console.log("Kya primary account mil rha h", Accounts);
   const [balance, setBalance] = useState(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
@@ -91,6 +93,13 @@ const Dashboard = () => {
       .finally(() => setActivityLoading(false));
   }, [primary?._id]);
 
+  if (Accountloading) {
+  return (
+    <div className="flex h-screen bg-[#050505] text-white items-center justify-center">
+      <Loader2 className="animate-spin text-blue-400" size={32} />
+    </div>
+  );
+}
   if (!Accounts || Accounts.length === 0) {
     return (
       <div className="flex h-screen bg-[#050505] text-white relative font-sans overflow-hidden items-center justify-center">

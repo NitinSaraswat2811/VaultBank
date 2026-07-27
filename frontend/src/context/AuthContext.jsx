@@ -12,6 +12,9 @@ export const AuthProvider = ({ children }) => {
         const savedUser = localStorage.getItem("user");
         const token = localStorage.getItem("token");
         
+         console.log("Saved user:", savedUser);
+        console.log("token is ",token);
+
         if (savedUser && token) {
             setUser(JSON.parse(savedUser));
         }
