@@ -1,37 +1,37 @@
-const express = require('express');
+const express = require("express");
 const cookieParser = require("cookie-parser");
-const cors = require('cors')
+const cors = require("cors");
 
 const app = express();
 
-// src/app.js (Sabse upar)
-app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://vaultbank-two.vercel.app"
+];
 
-    // Preflight request handle karne ke liye
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-    next();
-});
+app.use(cors({
+    origin: function (origin, callback) {
+        // Postman/curl/server-to-server requests ke liye
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    credentials: true
+}));
 
 app.use(express.json());
 app.use(cookieParser());
 
-/**
- * Routes required
- */
 const authRouter = require("./routes/auth.routes");
 const accountRouter = require("./routes/account.routes");
 const transactionRoutes = require("./routes/transaction.route");
-/**
- * Routes are used here
- */
-app.use("/api/auth",authRouter); 
-app.use("/api/accounts",accountRouter);
-app.use("/api/transactions",transactionRoutes);
 
-module.exports = app ;  
+app.use("/api/auth", authRouter);
+app.use("/api/accounts", accountRouter);
+app.use("/api/transactions", transactionRoutes);
+
+module.exports = app;
