@@ -324,13 +324,15 @@ Potential future improvements include:
 * [ ] Two-factor authentication
 * [ ] Enhanced transaction search and filtering
 
-## 📸 Screenshots
-
-Screenshots and a complete product walkthrough will be added soon.
-
 ## 🎥 Demo
 
-A complete video demonstration of VaultBank will be added after the project is deployed.
+Watch the complete VaultBank walkthrough here:
+
+▶️ **LinkedIn Demo**
+https://www.linkedin.com/feed/update/urn:li:activity:7487916269434781697/
+
+🌐 **Live Application**
+https://vaultbank-two.vercel.app
 
 ## 🔗 Repository
 
