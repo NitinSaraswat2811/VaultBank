@@ -163,6 +163,69 @@ Start the backend development server:
 ```bash
 npm run dev
 ```
+### 🐳 Backend Setup Using Docker
+
+VaultBank's backend can also be run inside a Docker container.
+
+#### 1. Build the Backend Image
+
+Navigate to the backend directory:
+
+```bash
+cd backend
+```
+
+Build the Docker image:
+
+```bash
+docker build -t vaultbank-backend .
+```
+
+#### 2. Configure Environment Variables
+
+Create a `.env` file inside the `backend/` directory:
+
+```env
+MONGO_URL=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+SYSTEM_ACCOUNT_NUMBER=your_system_account_number
+```
+
+Ensure that the environment variables are correctly configured before starting the container.
+
+#### 3. Run the Backend Container
+
+```bash
+docker run --name vaultbank-backend-container --env-file .env -p 3000:3000 vaultbank-backend
+```
+
+The backend will be available at:
+
+```text
+http://localhost:3000
+```
+
+#### 4. Container Management
+
+Stop the running container:
+
+```bash
+docker stop vaultbank-backend-container
+```
+
+Start the existing container again:
+
+```bash
+docker start vaultbank-backend-container
+```
+
+View container logs:
+
+```bash
+docker logs -f vaultbank-backend-container
+```
+
+> The frontend currently runs separately using Vite, while the backend runs inside Docker. MongoDB Atlas remains an external database service.
 
 ### 3. Frontend Setup
 
