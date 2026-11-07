@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: "https://vaultbank-09yd.onrender.com/api",
+    baseURL: "http://localhost:3000/api",
 });
 
 // Har request se pehle latest token attach karo

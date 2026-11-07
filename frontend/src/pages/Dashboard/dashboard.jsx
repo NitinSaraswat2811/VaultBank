@@ -48,7 +48,7 @@ const Dashboard = () => {
   const [balanceVisible, setBalanceVisible] = useState(true);
 
    console.log("Auth context k andar se user ye h ",user);
-  const primary = Accounts?.[0];
+  const primary = Accounts?.[1];
   
   console.log("Kya primary account mil rha h", Accounts);
   const [balance, setBalance] = useState(null);

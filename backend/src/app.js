@@ -5,7 +5,8 @@ const cors = require("cors");
 const app = express();
 
 const allowedOrigins = [
-    "https://vaultbank-iuaj90mpy-nitinsaraswat2811s-projects.vercel.app",
+    "http://localhost:5700",
+    "http://127.0.0.1:5700",
     "https://vaultbank-two.vercel.app"
 ];
 
